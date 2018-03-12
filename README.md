@@ -12,35 +12,48 @@ By using `Result` you are consistent with "error"-handling and have more explici
 
 ```java
 // LoadJson.java
-import static functional.ThrowsAsResult.throwsAsResult;
+import com.distil.functional.Result;
+
+import java.io.IOException;
+
+import static com.distil.functional.Result.ok;
+import static com.distil.functional.Result.okOrNullException;
+import static com.distil.functional.ThrowsAsResult.throwsAsResult;
 
 JSONObject standardLoadJson(String filename) throws IOException {
     // The standard way of loading a json file.
 }
 
-public class LoadJson {
-    public static Result<JSONObject, IOException> loadJson(String filename) {
-        return throwsAsResult(
+Result<JSONObject, IOException> loadJson(String filename) {
+    return throwsAsResult(
             () -> standardLoadJson("config.json"),
             IOException.class
-        ).get()
-    }
+    ).get();
 }
 
 
 // main.java
-import static functional.Result.okOrNullException;
-import static LoadJson.loadJson;
+import com.distil.functional.Result;
 
-public Result<String, Exception> getConfigured(String key) {
-    return ok("config.json", Exception.class)
-            .andThen(::loadJson)
-            .andThen(config -> okOrNullException(config.getString(key)));
-    }
+import static com.distil.functional.Result.ok;
+import static com.distil.functional.Result.okOrNullException;
+import static com.distil.functional.ThrowsAsResult.throwsAsResult;
+
+Result<Integer, MyException> getConfigured(String key) {
+    return ok("config.json", MyException.class)
+            .andThen(file -> loadJson("config.json")
+                    .mapErr(MyException::new))
+            .andThen(config -> okOrNullException(config.getString(key))
+                    .mapErr(MyException::new))
+            .andThen(value -> ok(value, NumberFormatException.class)
+                    .andThen(throwsAsResult(
+                            integer -> Integer.parseInt(integer),
+                            NumberFormatException.class))
+                    .mapErr(MyException::new));
 }
 
-public int main() {
-    int width = getConfigured("width").unwrapOr(80);
+void main(String[] args) {
+    int width = getConfigured("key").unwrapOr(80);
 
     System.out.println("width = " + width);
 }
