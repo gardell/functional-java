@@ -2,7 +2,7 @@ allprojects {
 	version = "1.0"
 
     repositories {
-        maven { url 'https://jitpack.io' }
+		jcenter()
     }
 }
 
